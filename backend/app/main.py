@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from .ai_engine import assess_target, generate_script, local_ai_response, overall_severity, report_markdown
 from .database import get_conn, init_db, row_to_scan
+from .live_audit import passive_live_audit
 from .nvd import search_cves
 
 
@@ -51,7 +52,11 @@ def health() -> dict:
 
 @app.post("/api/scan")
 def create_scan(req: ScanRequest) -> dict:
-    findings = assess_target(req.target, req.scan_type, req.notes)
+    is_web_target = req.target.lower().startswith(("http://", "https://"))
+    if is_web_target and req.scan_type.lower() != "demo":
+        findings = passive_live_audit(req.target)
+    else:
+        findings = assess_target(req.target, req.scan_type, req.notes)
     severity, score = overall_severity(findings)
     with get_conn() as conn:
         cur = conn.execute(

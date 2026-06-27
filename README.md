@@ -1,6 +1,6 @@
 # AI for VAPT
 
-AI for VAPT is a full-stack demonstration platform for vulnerability assessment and penetration testing workflows. It combines OWASP Top 10 checks, network reconnaissance concepts, Burp Suite workflow mapping, Nmap/Nessus-style correlation, local AI security analysis, CVE lookups through the public NVD API, script generation, report generation, and SQLite scan history.
+AI for VAPT is a full-stack vulnerability assessment and penetration testing workflow platform. It combines passive live website auditing, OWASP Top 10 checks, network reconnaissance concepts, Burp Suite workflow mapping, Nmap/Nessus-style correlation, local AI security analysis, CVE lookups through the public NVD API, script generation, report generation, and SQLite scan history.
 
 ## Stack
 
@@ -9,6 +9,22 @@ AI for VAPT is a full-stack demonstration platform for vulnerability assessment 
 - Local heuristic AI engine, no sign-in or API key required
 - SQLite persistence
 - Docker Compose one-command setup
+
+## Live Audit Scope
+
+For HTTP/HTTPS targets, the default scan mode performs a real passive audit:
+
+- Fetches the target and a small number of same-origin links
+- Checks TLS reachability and certificate validation
+- Checks common security headers
+- Reviews cookie security flags
+- Identifies forms missing obvious CSRF token fields
+- Finds object-like parameters that need IDOR authorization testing
+- Sends one harmless reflection marker to parameterized URLs to identify reflected-input candidates
+- Looks for client-side secret markers and debug/error text
+- Fingerprints common technologies for CVE follow-up
+
+It does not submit forms, brute force, exploit vulnerabilities, authenticate, or run destructive payloads. Use the explicit Demo Simulation mode for presentation-only OWASP examples.
 
 ## Run with Docker
 
