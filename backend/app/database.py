@@ -3,7 +3,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-DB_PATH = Path(__file__).resolve().parents[2] / "data" / "vapt.sqlite3"
+DB_PATH = Path(__file__).resolve().parents[2] / "data" / "guardrail.sqlite3"
 
 
 def get_conn() -> sqlite3.Connection:
@@ -17,32 +17,56 @@ def init_db() -> None:
     with get_conn() as conn:
         conn.execute(
             """
-            CREATE TABLE IF NOT EXISTS scans (
+            CREATE TABLE IF NOT EXISTS prompt_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                target TEXT NOT NULL,
-                scan_type TEXT NOT NULL,
-                status TEXT NOT NULL,
-                severity TEXT NOT NULL,
-                score REAL NOT NULL,
+                user_email TEXT NOT NULL,
+                department TEXT NOT NULL,
+                role TEXT NOT NULL,
+                prompt_preview TEXT NOT NULL,
+                prompt_hash TEXT NOT NULL,
+                risk_level TEXT NOT NULL,
+                risk_score INTEGER NOT NULL,
+                action TEXT NOT NULL,
+                model_route TEXT NOT NULL,
+                approval_status TEXT NOT NULL,
                 findings TEXT NOT NULL,
+                policy_matches TEXT NOT NULL,
+                ip_address TEXT NOT NULL,
+                device TEXT NOT NULL,
+                browser TEXT NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
             """
         )
         conn.execute(
             """
-            CREATE TABLE IF NOT EXISTS reports (
+            CREATE TABLE IF NOT EXISTS approvals (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                target TEXT NOT NULL,
-                body TEXT NOT NULL,
+                log_id INTEGER NOT NULL,
+                requested_by TEXT NOT NULL,
+                approver_role TEXT NOT NULL,
+                status TEXT NOT NULL,
+                reason TEXT NOT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
             )
             """
         )
 
 
-def row_to_scan(row: sqlite3.Row) -> dict[str, Any]:
-    scan = dict(row)
-    scan["findings"] = json.loads(scan["findings"])
-    return scan
+def row_to_prompt_log(row: sqlite3.Row) -> dict[str, Any]:
+    log = dict(row)
+    log["findings"] = json.loads(log["findings"])
+    log["policy_matches"] = json.loads(log["policy_matches"])
+    return log
+
+
+def row_to_approval(row: sqlite3.Row) -> dict[str, Any]:
+    return dict(row)

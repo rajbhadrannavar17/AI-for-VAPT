@@ -1,68 +1,41 @@
-# AI for VAPT
+# AI Guardrail
 
-AI for VAPT is a full-stack vulnerability assessment and penetration testing workflow platform. It combines passive live website auditing, OWASP Top 10 checks, network reconnaissance concepts, Burp Suite workflow mapping, Nmap/Nessus-style correlation, local AI security analysis, CVE lookups through the public NVD API, script generation, report generation, and SQLite scan history.
+AI Guardrail is an enterprise AI data-loss-prevention gateway. It inspects employee prompts before they reach AI systems, detects sensitive corporate data, applies policy decisions, redacts risky content, routes approved prompts to safe model tiers, inspects model responses, and records audit evidence.
+
+This implementation is a portfolio-ready local demo. It does not call external LLM providers and does not require API keys. Prompts are inspected locally and stored only in the local SQLite database under `data/`, which is ignored by Git.
+
+## Core Capabilities
+
+- Corporate AI gateway with prompt inspection and simulated model routing
+- Sensitive data detection for credentials, tokens, private keys, PII, payment data, internal URLs, source code, contracts, financial reports, medical records, and prompt injection
+- Risk classification: Low, Medium, High, Critical
+- Policy actions: allow, warn, redact, manager approval, security approval, block
+- Redaction preview before routing
+- Response inspection before delivery
+- Audit logs with user, department, role, timestamp, risk score, action, model route, IP, device, browser, findings, and approval status
+- Approval workflow for manager and security review
+- Analytics dashboard for blocked, allowed, redacted, department usage, highest-risk users, common secret types, and model usage
+- SIEM-ready JSON event endpoint and CSV export
+- Enterprise policy and compliance mapping for ISO 27001, SOC 2, NIST CSF, NIST AI RMF, OWASP LLM Top 10, PCI DSS, HIPAA, GDPR, and DPDP Act
 
 ## Stack
 
-- React + Tailwind dark terminal UI
-- Python FastAPI backend
-- Local heuristic AI engine, no sign-in or API key required
-- SQLite persistence
-- Docker Compose one-command setup
+- Frontend: React, Vite, Tailwind CSS, lucide-react
+- Backend: FastAPI, Pydantic, SQLite
+- Deployment: Docker Compose
 
-## Live Audit Scope
-
-For HTTP/HTTPS targets, the default scan mode performs a real passive audit:
-
-- Fetches the target and a small number of same-origin links
-- Checks TLS reachability and certificate validation
-- Checks common security headers
-- Reviews cookie security flags
-- Identifies forms missing obvious CSRF token fields
-- Finds object-like parameters that need IDOR authorization testing
-- Sends one harmless reflection marker to parameterized URLs to identify reflected-input candidates
-- Looks for client-side secret markers and debug/error text
-- Fingerprints common technologies for CVE follow-up
-
-It does not submit forms, brute force, exploit vulnerabilities, authenticate, or run destructive payloads. Use the explicit Demo Simulation mode for presentation-only OWASP examples.
-
-## Professional Documentation and Reports
-
-The report generator creates an educator-ready VAPT report with:
-
-- Executive summary and scope
-- Severity summary table
-- CVSS-style score and vector for every finding
-- OWASP Top 10 mapping
-- Burp Suite workflow mapping
-- Evidence and impact explanation
-- Conceptual explanation of how attackers abuse each weakness
-- Safe validation approach for supervised manual testing
-- Remediation and retest checklist
-- Competency mapping to VAPT job-description skills
-
-The application separates passive evidence from confirmed exploitability. Reflected-input, IDOR, SQLi, XSS, and CSRF candidates must be manually validated only in authorized scope.
-
-## Job Competency Coverage
-
-- OWASP Top 10 awareness: SQLi, XSS, CSRF, IDOR, security misconfiguration, cryptographic failures, vulnerable components
-- Networking fundamentals: HTTP/HTTPS, TLS, headers, ports, protocols, service exposure
-- Tool familiarity: Burp workflow mapping, Nmap-style scripts, Nessus-style severity triage
-- AI/LLM security: prompt injection, data leakage, and model misuse classification
-- Vulnerability scanning support: passive live audit, CVE lookup, scan history, reports
-- Scripting: Python, Bash, PowerShell script generation plus standalone tools
-- Documentation: professional report generation, retest checklist, confidentiality note
-
-## Run with Docker
+## Run With Docker
 
 ```bash
 docker compose up --build
 ```
 
 Frontend: http://localhost:5173  
-Backend: http://localhost:8000/docs
+Backend API: http://localhost:8000/docs
 
 ## Local Development
+
+Backend:
 
 ```bash
 cd backend
@@ -72,22 +45,65 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
+Frontend:
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-## Standalone Scripts
+## API Overview
 
-Scripts live in `/scripts`:
+- `POST /api/guardrail/inspect` inspects a prompt and returns a policy decision.
+- `POST /api/guardrail/chat` runs the full local gateway flow with response inspection.
+- `POST /api/guardrail/response-inspect` inspects a model response.
+- `GET /api/guardrail/logs` returns audit logs.
+- `GET /api/guardrail/logs/export.csv` exports audit logs.
+- `GET /api/guardrail/analytics` returns dashboard metrics.
+- `GET /api/guardrail/policies` returns sample enterprise policies.
+- `POST /api/guardrail/approvals` creates an approval request.
+- `GET /api/guardrail/siem/{log_id}` returns a SIEM-normalized event.
 
-- `port_scanner.py`
-- `http_header_auditor.py`
-- `sqli_param_finder.py`
-- `xss_payload_tester.py`
-- `subdomain_enumerator.py`
-- `nmap_xml_parser.py`
-- `event_log_analyzer.ps1`
+## Data Handling
 
-Only test systems you own or have explicit written authorization to assess.
+The repository intentionally excludes local data and secrets:
+
+- `.env` and `.env.*`
+- local SQLite files under `data/`
+- virtual environments
+- dependency folders
+- build outputs
+- Python cache files
+
+Do not commit real employee prompts, customer data, credentials, reports, private keys, or production configuration.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  Employee --> Portal[AI Guardrail Portal]
+  Portal --> Scanner[Prompt Scanner]
+  Scanner --> DLP[DLP Engine]
+  DLP --> Policy[Policy Engine]
+  Policy --> Approval[Approval Workflow]
+  Policy --> Router[Model Router]
+  Router --> LLM[Enterprise or Internal LLM]
+  LLM --> Response[Response Scanner]
+  Response --> Employee
+  Policy --> Audit[Audit Logger]
+  Audit --> SIEM[SIEM Export]
+```
+
+## Production Roadmap
+
+For production, replace demo components with enterprise services:
+
+- PostgreSQL for audit logs, Redis for queues, and object storage for approved files
+- SSO with Azure AD, Google OAuth, SAML, or LDAP
+- OPA for centralized policy evaluation
+- Presidio, spaCy, YARA, and managed DLP services for deeper classification
+- Vault or cloud KMS for secrets
+- Real OpenAI, Azure OpenAI, Gemini, Claude, Ollama, or internal LLM routing
+- Slack, Teams, email, webhook, Splunk, Sentinel, Elastic, QRadar, and Chronicle integrations
+- Kubernetes deployment with network policies, ingress, TLS, and persistent storage
