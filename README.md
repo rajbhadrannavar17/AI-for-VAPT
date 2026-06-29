@@ -26,6 +26,33 @@ For HTTP/HTTPS targets, the default scan mode performs a real passive audit:
 
 It does not submit forms, brute force, exploit vulnerabilities, authenticate, or run destructive payloads. Use the explicit Demo Simulation mode for presentation-only OWASP examples.
 
+## Professional Documentation and Reports
+
+The report generator creates an educator-ready VAPT report with:
+
+- Executive summary and scope
+- Severity summary table
+- CVSS-style score and vector for every finding
+- OWASP Top 10 mapping
+- Burp Suite workflow mapping
+- Evidence and impact explanation
+- Conceptual explanation of how attackers abuse each weakness
+- Safe validation approach for supervised manual testing
+- Remediation and retest checklist
+- Competency mapping to VAPT job-description skills
+
+The application separates passive evidence from confirmed exploitability. Reflected-input, IDOR, SQLi, XSS, and CSRF candidates must be manually validated only in authorized scope.
+
+## Job Competency Coverage
+
+- OWASP Top 10 awareness: SQLi, XSS, CSRF, IDOR, security misconfiguration, cryptographic failures, vulnerable components
+- Networking fundamentals: HTTP/HTTPS, TLS, headers, ports, protocols, service exposure
+- Tool familiarity: Burp workflow mapping, Nmap-style scripts, Nessus-style severity triage
+- AI/LLM security: prompt injection, data leakage, and model misuse classification
+- Vulnerability scanning support: passive live audit, CVE lookup, scan history, reports
+- Scripting: Python, Bash, PowerShell script generation plus standalone tools
+- Documentation: professional report generation, retest checklist, confidentiality note
+
 ## Run with Docker
 
 ```bash

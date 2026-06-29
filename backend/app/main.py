@@ -50,6 +50,50 @@ def health() -> dict:
     return {"status": "ok", "engine": "local-ai-heuristic", "signin": False}
 
 
+@app.get("/api/documentation")
+def documentation() -> dict:
+    return {
+        "title": "AI for VAPT Professional Playbook",
+        "sections": [
+            {
+                "name": "Engagement Discipline",
+                "items": [
+                    "Confirm written authorization, scope, target URLs, test windows, and data-handling expectations.",
+                    "Use passive testing first, then escalate to manual verification only under supervision.",
+                    "Maintain confidentiality and avoid exposing client-specific evidence in public repositories.",
+                ],
+            },
+            {
+                "name": "OWASP Testing Coverage",
+                "items": [
+                    "Injection: reflected input, SQLi candidates, output encoding, and parameter handling.",
+                    "Broken Access Control: IDOR candidates, object identifiers, and role-based verification.",
+                    "Cryptographic Failures: HTTPS, TLS, HSTS, and cookie protection.",
+                    "Security Misconfiguration: headers, technology disclosure, debug text, and default behavior.",
+                    "Vulnerable Components: technology fingerprinting and NVD CVE follow-up.",
+                ],
+            },
+            {
+                "name": "Tool Workflow",
+                "items": [
+                    "Burp Suite: Proxy history, Repeater, DOM Invader, Logger, Comparer, Autorize, CSRF PoC Generator.",
+                    "Nmap: service discovery, port inventory, and XML parsing for reports.",
+                    "Nessus: severity correlation, remediation prioritization, and retest evidence.",
+                    "AI tools: prompt-risk classification, scripting support, report drafting, and triage assistance.",
+                ],
+            },
+            {
+                "name": "Reporting Standard",
+                "items": [
+                    "Every report includes scope, methodology, severity summary, CVSS-style score, evidence, impact, safe validation, remediation, and retest checklist.",
+                    "Each candidate issue is clearly separated from confirmed exploitability.",
+                    "Reports are written for technical teams, management, and interview demonstration.",
+                ],
+            },
+        ],
+    }
+
+
 @app.post("/api/scan")
 def create_scan(req: ScanRequest) -> dict:
     is_web_target = req.target.lower().startswith(("http://", "https://"))

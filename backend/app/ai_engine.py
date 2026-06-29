@@ -6,6 +6,92 @@ from dataclasses import dataclass
 
 SEVERITY_ORDER = {"Info": 0, "Low": 1, "Medium": 2, "High": 3, "Critical": 4}
 
+CVSS_VECTORS = {
+    "Critical": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+    "High": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:H/I:L/A:N",
+    "Medium": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N",
+    "Low": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:N/A:N",
+    "Info": "Informational finding; CVSS score not assigned",
+}
+
+EDUCATOR_GUIDANCE = {
+    "content-security-policy": {
+        "attacker": "If another input-handling flaw exists, an attacker can try to run script in a victim browser. Without CSP, the browser has fewer guardrails to block unauthorized script sources, inline script, or unsafe framing behavior.",
+        "validation": "Use Burp passive checks and browser devtools to confirm the response lacks CSP. Then review pages that render user-controlled data and verify output encoding. Do not test with real user accounts without authorization.",
+        "remediation": "Deploy a CSP starting with default-src 'self', define script-src/style-src/img-src/connect-src for required assets, remove unsafe-inline where possible, and monitor violations before enforcing tightly.",
+    },
+    "strict-transport-security": {
+        "attacker": "On networks an attacker controls, users can be downgraded or kept on HTTP if the browser has no HSTS policy for the site.",
+        "validation": "Confirm HTTPS is enabled first, then check for Strict-Transport-Security on HTTPS responses using Burp, curl, or browser network tools.",
+        "remediation": "Add Strict-Transport-Security with a conservative max-age first, then increase after confirming all subdomains support HTTPS.",
+    },
+    "x-frame-options": {
+        "attacker": "A malicious page can frame the site and trick users into clicking hidden buttons or UI elements, known as clickjacking.",
+        "validation": "Confirm whether X-Frame-Options or CSP frame-ancestors is present. Use a local proof page only against owned or authorized systems.",
+        "remediation": "Set X-Frame-Options: DENY or SAMEORIGIN, or preferably CSP frame-ancestors with the exact allowed origins.",
+    },
+    "x-content-type-options": {
+        "attacker": "Browsers may guess a file type incorrectly. If user-uploaded or dynamic content is served with the wrong type, MIME sniffing can increase script execution risk.",
+        "validation": "Review response headers for static and uploaded content. Confirm X-Content-Type-Options: nosniff is present.",
+        "remediation": "Set X-Content-Type-Options: nosniff and serve files with accurate Content-Type values.",
+    },
+    "referrer-policy": {
+        "attacker": "URLs can leak to third-party sites through the Referer header. If URLs contain identifiers or tokens, this can expose sensitive data.",
+        "validation": "Check response headers and review whether sensitive values appear in URLs.",
+        "remediation": "Set Referrer-Policy: strict-origin-when-cross-origin or a stricter policy based on business needs.",
+    },
+    "permissions-policy": {
+        "attacker": "If browser APIs are broadly available, compromised third-party content has a larger set of features to abuse.",
+        "validation": "Check whether Permissions-Policy is configured and whether sensitive APIs are needed.",
+        "remediation": "Disable unnecessary APIs by default and allow features only for trusted origins.",
+    },
+    "not using https": {
+        "attacker": "Plain HTTP lets network-positioned attackers observe or modify traffic, inject content, steal session data, or redirect users.",
+        "validation": "Confirm the final URL remains HTTP and that no HTTPS redirect is enforced.",
+        "remediation": "Enable HTTPS everywhere, redirect HTTP to HTTPS, set secure cookies, and then enable HSTS.",
+    },
+    "cookie missing flags": {
+        "attacker": "Cookies without Secure, HttpOnly, or SameSite are easier to expose through network downgrade, client-side script access, or cross-site request contexts.",
+        "validation": "Inspect Set-Cookie headers in Burp or browser devtools and confirm each security-relevant cookie has the right flags.",
+        "remediation": "Set Secure, HttpOnly, and SameSite=Lax or Strict for session cookies. Use SameSite=None only when required and always with Secure.",
+    },
+    "reflected parameter": {
+        "attacker": "If reflected input is inserted into HTML, JavaScript, attributes, or URLs without context-aware encoding, it can become reflected XSS.",
+        "validation": "Use a harmless marker to identify reflection, then manually inspect the output context. Confirm whether framework escaping protects the value before classifying as exploitable XSS.",
+        "remediation": "Apply context-aware output encoding, avoid dangerously setting HTML, validate expected parameter values, and add CSP as defense in depth.",
+    },
+    "technology header disclosure": {
+        "attacker": "Visible platform and version details help attackers choose known CVEs and targeted fingerprinting paths.",
+        "validation": "Confirm Server and X-Powered-By headers plus framework markers in responses.",
+        "remediation": "Remove unnecessary version headers and keep server/framework packages patched.",
+    },
+    "technology fingerprint": {
+        "attacker": "Technology fingerprints help attackers narrow testing to framework-specific CVEs, misconfigurations, and public exploit paths.",
+        "validation": "Correlate detected technologies with package manifests, deployment platform, and NVD results.",
+        "remediation": "Track dependency versions, patch quickly, and document compensating controls for components that cannot be updated immediately.",
+    },
+    "sql injection": {
+        "attacker": "When user input reaches SQL queries unsafely, attackers may read, change, or delete database records and bypass login or business logic.",
+        "validation": "Use Burp Repeater with authorized test accounts and benign timing/logic checks. Confirm server-side parameterization rather than relying on client validation.",
+        "remediation": "Use parameterized queries, ORM binding, least-privilege database users, input validation, and query logging.",
+    },
+    "cross-site scripting": {
+        "attacker": "XSS lets attacker-controlled script run in a user's browser, which can steal data, perform actions as the user, or modify page content.",
+        "validation": "Identify reflection/storage points with harmless markers, inspect context, and verify framework escaping.",
+        "remediation": "Use context-aware encoding, trusted sanitizers, avoid unsafe HTML sinks, and enforce CSP.",
+    },
+    "csrf": {
+        "attacker": "A victim's browser can be tricked into sending an authenticated state-changing request if tokens and SameSite protections are missing.",
+        "validation": "In an authorized environment, compare state-changing requests for per-request tokens and SameSite cookie behavior.",
+        "remediation": "Use anti-CSRF tokens, SameSite cookies, origin checks, and re-authentication for sensitive actions.",
+    },
+    "idor": {
+        "attacker": "Changing object IDs can expose or modify another user's data when server-side authorization is missing.",
+        "validation": "Use two authorized test accounts and Burp Comparer/Autorize to verify object-level access control.",
+        "remediation": "Enforce server-side object authorization on every request and avoid relying on hidden UI controls.",
+    },
+}
+
 
 @dataclass(frozen=True)
 class Finding:
@@ -142,25 +228,110 @@ done
 
 def report_markdown(target: str, findings: list[dict]) -> str:
     sev, score = overall_severity(findings)
+    counts = {name: 0 for name in ["Critical", "High", "Medium", "Low", "Info"]}
+    for finding in findings:
+        counts[finding.get("severity", "Info")] = counts.get(finding.get("severity", "Info"), 0) + 1
     lines = [
-        f"# AI for VAPT Pentest Report: {target}",
+        f"# AI for VAPT Professional Assessment Report",
         "",
-        f"Overall risk: **{sev}** (CVSS-style score {score:.1f})",
+        f"**Target:** {target}",
+        f"**Overall Risk:** {sev}",
+        f"**Highest CVSS-style Score:** {score:.1f}",
+        "**Assessment Type:** Passive live web audit with educator-focused VAPT reporting",
         "",
         "## Executive Summary",
-        "This assessment correlates OWASP Top 10 checks, network exposure review, Burp Suite workflow mapping, Nmap-style service discovery, Nessus-style severity reasoning, and local AI security review.",
+        "This report summarizes security observations discovered through a safe passive assessment. It is designed for VAPT education, supervised testing, and professional reporting practice. Findings are mapped to OWASP Top 10, CVSS-style scoring, Burp Suite workflows, networking concepts, and remediation guidance.",
         "",
-        "## Findings",
+        "The assessment does not prove exploitability by itself. Items marked as candidates require authorized manual verification before being treated as confirmed vulnerabilities.",
+        "",
+        "## Severity Summary",
+        "",
+        "| Severity | Count |",
+        "|---|---:|",
+        *[f"| {name} | {counts.get(name, 0)} |" for name in ["Critical", "High", "Medium", "Low", "Info"]],
+        "",
+        "## Methodology",
+        "",
+        "1. Scope confirmation and authorization reminder.",
+        "2. Passive HTTP/TLS request and same-origin crawl.",
+        "3. Security header and cookie review.",
+        "4. OWASP issue classification for security misconfiguration, cryptographic failures, injection candidates, and access-control review points.",
+        "5. Burp Suite workflow mapping for manual verification.",
+        "6. NVD/CVE follow-up guidance for detected technologies.",
+        "7. Professional remediation and retest notes.",
+        "",
+        "## Findings Detail",
+        "",
+        "| ID | Finding | Severity | CVSS | OWASP | Tool Mapping |",
+        "|---|---|---|---:|---|---|",
+    ]
+    for idx, finding in enumerate(findings, 1):
+        lines.append(
+            f"| F-{idx:02d} | {finding['title']} | {finding['severity']} | {float(finding['score']):.1f} | {finding['owasp']} | {finding['burp_tool']} |"
+        )
+    lines += [
+        "",
+        "## Educator Notes and Remediation",
     ]
     for idx, f in enumerate(findings, 1):
+        guide = _guidance_for(f["title"])
         lines += [
-            f"### {idx}. {f['title']}",
-            f"- Severity: {f['severity']} ({f['score']})",
-            f"- Category: {f['category']}",
-            f"- OWASP / domain: {f['owasp']}",
-            f"- Burp / tool workflow: {f['burp_tool']}",
-            f"- Evidence: {f['evidence']}",
-            f"- Recommendation: {f['recommendation']}",
+            f"### F-{idx:02d}: {f['title']}",
+            "",
+            f"**Severity:** {f['severity']}  ",
+            f"**CVSS-style Score:** {float(f['score']):.1f}  ",
+            f"**CVSS-style Vector:** {CVSS_VECTORS.get(f['severity'], CVSS_VECTORS['Info'])}  ",
+            f"**Category:** {f['category']}  ",
+            f"**OWASP Mapping:** {f['owasp']}  ",
+            f"**Burp / Tool Workflow:** {f['burp_tool']}",
+            "",
+            f"**Evidence:** {f['evidence']}",
+            "",
+            f"**How attackers typically abuse this weakness:** {guide['attacker']}",
+            "",
+            f"**Safe validation approach:** {guide['validation']}",
+            "",
+            f"**Recommended remediation:** {guide['remediation']}",
+            "",
+            f"**Project recommendation:** {f['recommendation']}",
             "",
         ]
+    lines += [
+        "## Competency Mapping",
+        "",
+        "| Job Skill | Evidence in This Project |",
+        "|---|---|",
+        "| OWASP Top 10 | Findings map to Injection, Security Misconfiguration, Cryptographic Failures, Broken Access Control, and vulnerable components. |",
+        "| Networking fundamentals | TLS, HTTPS/HTTP, ports, protocols, service exposure, and header behavior are represented in audit logic and reports. |",
+        "| Burp Suite familiarity | Each finding includes Burp workflow guidance such as Proxy history, Repeater, DOM Invader, Logger, Comparer, and passive scanner checks. |",
+        "| Nmap/Nessus exposure | Scripts and report language support service discovery, XML parsing, and severity correlation. |",
+        "| AI/LLM security | Local analyzer classifies prompt injection, data leakage, and misuse patterns. |",
+        "| Manual penetration testing support | Report separates passive evidence from manual verification steps. |",
+        "| Scripting | Python, Bash, and PowerShell script generation plus standalone scripts are included. |",
+        "| Documentation | This report provides executive summary, methodology, severity tables, CVSS-style scoring, remediation, and retest guidance. |",
+        "",
+        "## Retest Checklist",
+        "",
+        "- Confirm high and medium findings are remediated in a staging environment first.",
+        "- Re-run the passive audit after deployment.",
+        "- Manually verify reflected-input and authorization candidates using authorized accounts only.",
+        "- Update the final status of each finding as Open, Risk Accepted, False Positive, or Remediated.",
+        "- Keep evidence, screenshots, timestamps, and tool versions for audit traceability.",
+        "",
+        "## Confidentiality Note",
+        "",
+        "This report may contain target-specific infrastructure details. Share it only with authorized stakeholders and avoid publishing sensitive evidence publicly.",
+    ]
     return "\n".join(lines)
+
+
+def _guidance_for(title: str) -> dict[str, str]:
+    lowered = title.lower()
+    for key, guide in EDUCATOR_GUIDANCE.items():
+        if key in lowered:
+            return guide
+    return {
+        "attacker": "Attackers use this type of weakness to gather information, increase exploit reliability, or chain it with other issues discovered during reconnaissance.",
+        "validation": "Confirm the observation with passive tooling first, then perform manual testing only in an authorized scope with documented test accounts and change windows.",
+        "remediation": "Reduce exposed information, enforce secure defaults, validate inputs server-side, and retest after deployment.",
+    }
